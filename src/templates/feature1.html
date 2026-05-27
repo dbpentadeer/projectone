@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>晨間股票看盤 - Flask 控制中心</title>
+    <!-- Google Fonts Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary: #6366f1;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --success: #10b981;
+            --error: #ef4444;
+            --success-bg: rgba(16, 185, 129, 0.1);
+            --error-bg: rgba(239, 68, 68, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 40%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+        }
+
+        /* Navigation Bar */
+        nav {
+            width: 100%;
+            padding: 20px 40px;
+            background: rgba(17, 24, 39, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 6px 12px;
+            border-radius: 8px;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-links a.active {
+            color: #fff;
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 40px auto;
+            padding: 0 20px;
+            flex: 1;
+        }
+
+        header {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            animation: fadeInDown 0.8s ease both;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.01em;
+            margin-bottom: 4px;
+        }
+
+        .header-meta {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* Grid Layout */
+        .stock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 25px;
+            animation: fadeInUp 0.8s ease both 0.1s;
+        }
+
+        .stock-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stock-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: transparent;
+            transition: background-color 0.3s ease;
+        }
+
+        .stock-card.up::before {
+            background-color: var(--success);
+        }
+
+        .stock-card.down::before {
+            background-color: var(--error);
+        }
+
+        .stock-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .stock-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .stock-ticker {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: 2px;
+            display: inline-block;
+        }
+
+        .badge {
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .badge.up {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        .badge.down {
+            background: var(--error-bg);
+            color: var(--error);
+        }
+
+        .stock-body {
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stock-price {
+            font-size: 2rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.02em;
+        }
+
+        .stock-currency {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            margin-left: 4px;
+        }
+
+        /* Sparkline trend representation */
+        .sparkline-container {
+            width: 100%;
+            height: 50px;
+            margin-top: 10px;
+        }
+
+        .sparkline {
+            width: 100%;
+            height: 100%;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .stock-card.up .sparkline {
+            stroke: var(--success);
+            filter: drop-shadow(0 2px 4px rgba(16, 185, 129, 0.2));
+        }
+
+        .stock-card.down .sparkline {
+            stroke: var(--error);
+            filter: drop-shadow(0 2px 4px rgba(239, 68, 68, 0.2));
+        }
+
+        footer {
+            padding: 30px 40px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            margin-top: 40px;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Shared Navigation -->
+    <nav>
+        <a href="/" class="nav-logo">Dashboard Center</a>
+        <div class="nav-links">
+            <a href="/">首頁 API</a>
+            <a href="/feature1" class="active">☀️ 早上看股票</a>
+            <a href="/feature2">💻 下午上班公司</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header>
+            <div>
+                <h1>晨間自選股看盤</h1>
+                <div class="header-meta">每個工作日早晨為您鎖定的全球科技指標股</div>
+            </div>
+            <div class="header-meta">
+                更新時間: 早上 09:30 (即時延遲 20m)
+            </div>
+        </header>
+
+        <div class="stock-grid">
+            <!-- Stock 1 -->
+            <div class="stock-card up">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-title">台積電</div>
+                        <span class="stock-ticker">2330.TW</span>
+                    </div>
+                    <span class="badge up">▲ +2.45%</span>
+                </div>
+                <div class="stock-body">
+                    <div class="stock-price">985.00<span class="stock-currency">TWD</span></div>
+                    <!-- Sparkline SVG -->
+                    <div class="sparkline-container">
+                        <svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none">
+                            <path d="M0,25 Q15,15 30,20 T60,10 T80,5 T100,2" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock 2 -->
+            <div class="stock-card up">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-title">輝達</div>
+                        <span class="stock-ticker">NVDA.US</span>
+                    </div>
+                    <span class="badge up">▲ +3.82%</span>
+                </div>
+                <div class="stock-body">
+                    <div class="stock-price">128.50<span class="stock-currency">USD</span></div>
+                    <div class="sparkline-container">
+                        <svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none">
+                            <path d="M0,28 Q15,25 30,12 T60,18 T80,6 T100,1" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock 3 -->
+            <div class="stock-card down">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-title">蘋果</div>
+                        <span class="stock-ticker">AAPL.US</span>
+                    </div>
+                    <span class="badge down">▼ -0.62%</span>
+                </div>
+                <div class="stock-body">
+                    <div class="stock-price">224.30<span class="stock-currency">USD</span></div>
+                    <div class="sparkline-container">
+                        <svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none">
+                            <path d="M0,5 Q15,8 30,18 T60,10 T80,22 T100,25" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock 4 -->
+            <div class="stock-card up">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-title">微軟</div>
+                        <span class="stock-ticker">MSFT.US</span>
+                    </div>
+                    <span class="badge up">▲ +1.15%</span>
+                </div>
+                <div class="stock-body">
+                    <div class="stock-price">442.80<span class="stock-currency">USD</span></div>
+                    <div class="sparkline-container">
+                        <svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none">
+                            <path d="M0,20 Q15,22 30,15 T60,12 T80,8 T100,5" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2026 MyProject. Powered by Flask & Financial Widgets.
+    </footer>
+
+</body>
+</html>
