@@ -9,9 +9,9 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # 3️⃣ 若有 requirements.txt，先安裝相依套件（如果沒有則跳過）
-COPY requirements.txt . || true
+COPY requirements.txt .
 RUN if [ -f requirements.txt ]; then \
-        pip install --no-cache-dir -r requirements.txt; \
+    pip install --no-cache-dir -r requirements.txt; \
     fi
 
 # 4️⃣ 複製整個專案（會受到 .dockerignore 的過濾）

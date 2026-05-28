@@ -1,0 +1,30 @@
+# --------------------------------------------------------------
+# .dockerignore – Exclude unnecessary files from Docker build
+# --------------------------------------------------------------
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual env
+.venv/
+venv/
+
+# Git
+.git
+.gitignore
+
+# Tests / coverage
+tests/
+.pytest_cache/
+.coverage
+
+# Logs / temp files
+*.log
+*.tmp
+
+# Documentation (optional)
+*.md
+*.txt
+
+!requirements.txt
