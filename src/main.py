@@ -1,13 +1,31 @@
 import sys
 from flask import Flask, render_template, request, jsonify
-from utils import sanitize_name, setup_logger, api_response
+from utils import sanitize_name, setup_logger, api_response, upload_to_s3
 
 # Initialize our standard logger
 logger = setup_logger("flask_app")
 
-# Initialize the Flask application
-# Specify template folder location explicitly to ensure it loads properly from src/
-app = Flask(__name__, template_folder="templates")
+import os
+
+# Initialize the Flask application with explicit absolute template folder path
+app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "templates"))
+
+@app.route("/upload", methods=["POST"])
+def upload_file():
+    """Handle file upload from Feature 3 UI and store to S3 bucket."""
+    try:
+        # Flask 傳入的檔案在 request.files 中
+        uploaded_file = request.files.get('file')
+        if not uploaded_file:
+            return jsonify({"success": False, "error": "未收到檔案"}), 400
+        # 使用 utils 中的 upload_to_s3，傳入檔案物件與 bucket 名稱
+        file_url = upload_to_s3(uploaded_file, bucket_name="ckc101day2")
+        return jsonify({"success": True, "url": file_url}), 201
+    except Exception as e:
+        logger.error(f"Upload failed: {e}", exc_info=True)
+        return jsonify({"success": False, "error": "上傳失敗"}), 500
+
+
 
 
 @app.route("/", methods=["GET"])
@@ -22,13 +40,22 @@ def feature1():
     """Renders the morning stock watchlist dashboard page."""
     logger.info("Serving morning stocks page.")
     return render_template("feature1.html")
-
-
 @app.route("/feature2", methods=["GET"])
 def feature2():
-    """Renders the afternoon company workstation page."""
+    """Renders the afternoon company dashboard page (Feature 2)."""
     logger.info("Serving afternoon company page.")
     return render_template("feature2.html")
+
+@app.route("/feature3", methods=["GET"])
+def feature3():
+    """Renders the S3 upload page (Feature 3)."""
+    logger.info("Serving Feature 3 upload page.")
+    return render_template("feature3.html")
+
+
+
+
+
 
 
 
@@ -89,6 +116,17 @@ def main() -> int:
         return 1
 
 
-if __name__ == "__main__":
-    sys.exit(main())
 
+# -----------------------------------------------------------------
+# Error handling
+# -----------------------------------------------------------------
+@app.errorhandler(404)
+def page_not_found(e):
+    """Render a friendly 404 page when a route is not found."""
+    logger.warning(f"404 Not Found: {request.path}")
+    return render_template("404.html"), 404
+
+
+
+if __name__ == "__main__":
+    main()

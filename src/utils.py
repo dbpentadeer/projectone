@@ -71,3 +71,30 @@ def api_response(success: bool, message: str, data: Optional[Any] = None, status
     }
     return response_payload, status_code
 
+
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
+
+def upload_to_s3(file_obj, bucket_name: str) -> str:
+    """Upload a file-like object to the given S3 bucket.
+    The object key is generated from the original filename plus a timestamp to avoid collisions.
+    Returns the public URL of the uploaded object (assuming the bucket allows public read).
+    """
+    import datetime, urllib.parse
+    # Generate a safe key: original filename (if any) plus timestamp
+    original_name = getattr(file_obj, "filename", getattr(file_obj, "name", "upload"))
+    # Ensure no path components
+    original_name = original_name.split('/')[-1]
+    timestamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    key = f"{timestamp}_{original_name}"
+    s3 = boto3.client('s3')  # IAM Role credentials
+    try:
+        s3.upload_fileobj(file_obj, bucket_name, key)
+        logging.info("Uploaded %s to s3://%s/%s", original_name, bucket_name, key)
+        # Build URL (public read assumed)
+        url = f"https://{bucket_name}.s3.amazonaws.com/{urllib.parse.quote(key)}"
+        return url
+    except (BotoCoreError, ClientError) as exc:
+        logging.error("Upload to S3 failed: %s", exc, exc_info=True)
+        raise
+

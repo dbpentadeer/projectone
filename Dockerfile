@@ -23,4 +23,5 @@ ENV PYTHONUNBUFFERED=1 \
 
 # 6️⃣ 預設入口 – 假設 Flask 程式入口是 src/main.py
 # 如需其他入口請自行修改此行
+EXPOSE 19191
 CMD ["python", "-u", "src/main.py"]

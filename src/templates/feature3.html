@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Feature 3 – 上傳檔案至 S3</title>
+    <style>
+        body {font-family: 'Segoe UI', Tahoma, sans-serif; margin:2rem; background:#f9f9f9;}
+        .container {max-width:600px; margin:auto; background:#fff; padding:2rem; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+        h1 {color:#2c3e50;}
+        input[type=file] {margin-top:1rem;}
+        button {margin-top:1rem; padding:0.6rem 1.2rem; background:#2980b9; color:#fff; border:none; border-radius:4px; cursor:pointer;}
+        button:hover {background:#3498db;}
+        .msg {margin-top:1rem; color:#27ae60;}
+        .err {margin-top:1rem; color:#c0392b;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Feature 3 – 上傳檔案到 S3</h1>
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="file" name="file" id="fileInput" required />
+            <br />
+            <button type="submit">上傳</button>
+        </form>
+        <div id="result" class="msg" style="display:none;"></div>
+        <div id="error" class="err" style="display:none;"></div>
+    </div>
+    <script>
+        const form = document.getElementById('uploadForm');
+        const resultDiv = document.getElementById('result');
+        const errorDiv = document.getElementById('error');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            resultDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+            const fileInput = document.getElementById('fileInput');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            try {
+                const resp = await fetch('/upload', {method: 'POST', body: formData});
+                const data = await resp.json();
+                if (resp.ok) {
+                    resultDiv.textContent = `上傳成功！檔案網址: ${data.url}`;
+                    resultDiv.style.display = 'block';
+                } else {
+                    errorDiv.textContent = data.error || '上傳失敗';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = err.message;
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
